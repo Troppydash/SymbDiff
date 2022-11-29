@@ -55,13 +55,14 @@ class RuleApplier:
     def prepare(self):
         self.order_rules()
         self.depth = ''
+        # self.logs = ['7', '9', '4', '7', '9']
         self.logs = []
 
     def __addlog(self, depth: str, rule: int):
         if len(self.logs) >= self.MAX_LOOP_SIZE:
             self.logs.pop(0)
 
-        self.logs.append(f"{depth}{rule}")
+        self.logs.append(f"{depth}_{rule}")
 
     def __poplog(self):
         self.logs.pop()
@@ -70,13 +71,30 @@ class RuleApplier:
         # check for repeats, only accepts loop of size >= 2
         # O(n^2) lmao
         size = len(self.logs)
-        for loopsize in range(2, size // 2):
-            for i in range(size - 2 * loopsize):
+        for loopsize in range(2, size // 2 + 1):
+            for i in range(size - 2 * loopsize + 1):
                 s1 = self.logs[i:i + loopsize]
                 s2 = self.logs[i + loopsize: i + 2 * loopsize]
-                if s1 == s2:
+
+                # check for slice equality
+                for i in range(len(s1)):
+                    if s1[i] != s2[i]:
+                        break
+                else:
                     return True
         return False
+
+    def __logloop(self, verbose: bool = True):
+        print(f"Warning: found loop {self.logs}")
+        # print extra
+        if verbose:
+            names = []
+            for log in self.logs:
+                depth, rule_i = log.split('_')
+                rule = self.rules[int(rule_i)]
+                names.append(f"({type(rule).__name__}) {depth}")
+
+            print(f"Verbose: [ {', '.join(names)} ]")
 
     def apply(self, expression: Expression) -> tuple[bool, Expression]:
         current = expression  # the modified expression
@@ -106,15 +124,15 @@ class RuleApplier:
             # try to apply the rules on the node
             for rule in self.rules:
                 if rule.match(current):
-                    matched = True
 
                     # check for loops
                     self.__addlog(self.depth, rule.id)
                     if self.__isrepeated():  # skip the rule if found a loop
-                        print(f"found loop, skipping. {self.logs}")
+                        self.__logloop()
                         self.__poplog()
-                        continue
+                        break
 
+                    matched = True
                     current = rule.apply(current)
                     # also break the entire loop, for the children must be rescanned
                     break

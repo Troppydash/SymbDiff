@@ -4,12 +4,12 @@ from symbols.node import Node, NodePrecedence
 class Literal(Node):
     pass
 
+
 class Variable(Literal):
     precedence = NodePrecedence.LITERAL
 
     def __init__(self, symbol: str = 'x'):
         super().__init__([], symbol)
-        self.what = 12
 
     def as_symbol(self):
         return self.symbol

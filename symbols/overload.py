@@ -1,6 +1,6 @@
 from typing import Any
 
-from symbols import binary, literal, function, operator
+from symbols import binary, literal, function, operator, unary
 from symbols.node import Node, Expression
 from symbols.binary import Add, Sub, Mul, Div, Pow
 from symbols.unary import Negate
@@ -125,6 +125,10 @@ class AstTransformer:
                     raise AstTransformerError(
                         f"unknown constant value, type(constant) = {type(pyast.value)}"
                     )
+
+            case ast.UnaryOp():
+                value = self.transform(pyast.operand)
+                return unary.Negate(value)
 
             case ast.Call():
                 # parse functions

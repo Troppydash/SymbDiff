@@ -52,6 +52,8 @@ class IdentityRule(Rule):
     ADD_SIMP_L = 3
     ADD_SIMP_R = 4
     SUB_SIMP_R = 5
+    SUB_SIMP_V = 6
+    DIV_SIMP_V = 7
 
     def match(self, expression: Expression) -> bool:
         match expression:
@@ -74,6 +76,20 @@ class IdentityRule(Rule):
             case binary.Sub() if isinstance(right := expression.right, literal.Real) and right.number == 0.0:
                 self.setitem(self.SUB_SIMP_R)
                 return True
+
+            case binary.Sub() if isinstance(expression.left, literal.Variable) \
+                                 and isinstance(expression.right, literal.Variable) \
+                                 and expression.left.symbol == expression.right.symbol:
+                self.setitem(self.SUB_SIMP_V)
+                return True
+
+            case binary.Div() if type(expression.left) == type(expression.right):
+                match expression.left:
+                    case literal.Variable() if expression.left.symbol == expression.right.symbol:
+                        self.setitem(self.DIV_SIMP_V)
+                        return True
+                    case _:
+                        return False
 
             case _:
                 self.setitem(0)
@@ -102,6 +118,12 @@ class IdentityRule(Rule):
 
             case self.SUB_SIMP_R:
                 return expression.left
+
+            case self.SUB_SIMP_V:
+                return literal.Real(0.0)
+
+            case self.DIV_SIMP_V:
+                return literal.Real(1.0)
 
 
 # puts the multiplication constant on the left
@@ -178,18 +200,21 @@ class ReorderRule(Rule):
 
     def match(self, expression: Expression) -> bool:
         match expression:
-            case binary.Add() | binary.Sub() | binary.Mul() | binary.Div():
+            case binary.Add() | binary.Mul():
+                # exclude division as those are hoisted rightwards
+
                 """
                 [P + R] => [R + P]
                 """
-                if isinstance(expression.right, literal.Real) and not isinstance(expression.left, literal.Real):
+                if isinstance(expression.right, literal.Real) and contains_variable(expression.left):
                     return True
 
                 """
                 [P + x] => [x + P]
                 """
-                if isinstance(expression.right, literal.Variable) and not isinstance(expression.left,
-                                                                                     (literal.Real, literal.Variable)):
+                if isinstance(expression.right, literal.Variable) and not (
+                        isinstance(expression.left, literal.Real) or contains_variable(expression.left)
+                ):
                     return True
             case _:
                 return False
@@ -205,24 +230,17 @@ class ReorderRule(Rule):
 class LeftAlignRule(Rule):
     weight = 7.0
 
-    BB_RULE = 1
-    LB_RULE = 2
+    LB_RULE = 1
 
     def match(self, expression: Expression) -> bool:
         match expression:
             case binary.Add() | binary.Sub() | binary.Mul() | binary.Div():
                 """
-                [[A + B] + [C + D]] => [[[A + B] + C] + D]
-                """
-                if (type(expression.left) == type(expression) and type(expression.right) == type(expression))\
-                        or (expression.right.precedence == expression.left.precedence == expression.precedence):
-                    self.setitem(self.BB_RULE)
-                    return True
-
-                """
                 [A + [B + C]] => [[A + B] + C]
                 """
-                if type(expression.right) == type(expression) or expression.right.precedence == expression.precedence:
+                if type(expression.right) == type(expression) \
+                        or (isinstance(expression.right, binary.Div) and isinstance(expression, binary.Mul)) \
+                        or (isinstance(expression.right, binary.Sub) and isinstance(expression, binary.Add)):
                     self.setitem(self.LB_RULE)
                     return True
 
@@ -231,14 +249,6 @@ class LeftAlignRule(Rule):
 
     def apply(self, expression: Expression) -> Expression:
         match self.item:
-            case self.BB_RULE:
-                return expression.right.__class__(
-                    expression.__class__(
-                        expression.left, expression.right.left
-                    ),
-                    expression.right.right
-                )
-
             case self.LB_RULE:
                 return expression.right.__class__(
                     expression.__class__(
@@ -249,7 +259,76 @@ class LeftAlignRule(Rule):
                 )
 
 
+# Division hosting over multiplication
+class HoistDivision(Rule):
+    weight = 9.0
+
+    def match(self, expression: Expression) -> bool:
+        # [[A / B] * C] => [[A * C] / B]
+        if isinstance(expression, binary.Mul) and isinstance(expression.left, binary.Div):
+            return True
+
+        return False
+
+    def apply(self, expression: Expression) -> Expression:
+        return binary.Div(
+            binary.Mul(expression.left.left, expression.right),
+            expression.left.right
+        )
+
+
+class CancelRule(Rule):
+    weight = 8.0
+
+    SUB_RULE = 1
+    DIV_RULE = 2
+
+    def match(self, expression: Expression) -> bool:
+        match expression:
+            case binary.Sub() if isinstance(expression.right, literal.Variable):
+                # drill down on left
+                left = expression.left
+                while isinstance(left, binary.Add):
+                    if isinstance(left.right, literal.Variable) and left.right.symbol == expression.right.symbol:
+                        self.setitem(self.SUB_RULE)
+                        return True
+                    left = left.left
+
+            case binary.Div() if isinstance(expression.right, literal.Variable):
+                # drill down on left
+                left = expression.left
+                while isinstance(left, binary.Mul):
+                    if isinstance(left.right, literal.Variable) and left.right.symbol == expression.right.symbol:
+                        self.setitem(self.DIV_RULE)
+                        return True
+                    left = left.left
+            case _:
+                return False
+
+    def apply(self, expression: Expression) -> Expression:
+        new_expression = expression.left
+
+        left = new_expression
+
+        match self.item:
+            case self.SUB_RULE:
+                while isinstance(left, binary.Add):
+                    if isinstance(left.right, literal.Variable) and left.right.symbol == expression.right.symbol:
+                        # replace left.right
+                        left.right = literal.Real(0.0)
+                        break
+            case self.DIV_RULE:
+                while isinstance(left, binary.Mul):
+                    if isinstance(left.right, literal.Variable) and left.right.symbol == expression.right.symbol:
+                        # replace left.right
+                        left.right = literal.Real(1.0)
+                        break
+
+        return new_expression
+
+
 # TODO, POWER RULES (DIVISION too)
 # also correct the precedence ignoring on reordering
 
-simplerules = [EvaluateRule(), IdentityRule(), CombineRule(), ReorderRule(), LeftAlignRule()]
+simplerules = [EvaluateRule(), IdentityRule(), CombineRule(), ReorderRule(), LeftAlignRule(), HoistDivision(),
+               CancelRule()]

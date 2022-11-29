@@ -20,28 +20,28 @@ class Binary(Node):
 
 
 class Add(Binary):
-    precedence = NodePrecedence.ADDSUB
+    precedence = NodePrecedence.ADD
 
     def __init__(self, left: Node, right: Node):
         super().__init__([left, right], '%0 + %1')
 
 
 class Sub(Binary):
-    precedence = NodePrecedence.ADDSUB
+    precedence = NodePrecedence.SUB
 
     def __init__(self, left: Node, right: Node):
         super().__init__([left, right], '%0 - %1')
 
 
 class Mul(Binary):
-    precedence = NodePrecedence.MULDIV
+    precedence = NodePrecedence.MUL
 
     def __init__(self, left: Node, right: Node):
         super().__init__([left, right], '%0 * %1')
 
 
 class Div(Binary):
-    precedence = NodePrecedence.MULDIV
+    precedence = NodePrecedence.DIV
 
     def __init__(self, left: Node, right: Node):
         super().__init__([left, right], '%0 / %1')

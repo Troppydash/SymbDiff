@@ -4,12 +4,14 @@ from enum import IntEnum
 class NodePrecedence(IntEnum):
     LOWEST = 0
     EQUAL = 1
-    ADDSUB = 3
-    MULDIV = 4
-    POW = 5
-    UNARY = 6
-    FUNCTION = 7
-    LITERAL = 8
+    ADD = 2
+    SUB = 3
+    MUL = 4
+    DIV = 5
+    POW = 6
+    UNARY = 7
+    FUNCTION = 8
+    LITERAL = 9
     HIGHEST = 100
 
 
