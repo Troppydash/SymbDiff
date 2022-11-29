@@ -36,7 +36,7 @@ class Real(Literal):
         return Real(self.number)
 
 
-class Int(Literal):
+class Int(Real):
     number: int
     precedence = NodePrecedence.LITERAL
 

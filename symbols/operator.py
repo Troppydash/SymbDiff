@@ -7,7 +7,7 @@ class Diff(Node):
     precedence = NodePrecedence.FUNCTION
 
     def __init__(self, expression: Node, symbol: str = 'x'):
-        super().__init__([expression], f'd/d{symbol}%0')
+        super().__init__([expression], f'd/d{symbol} %0')
         self.regard = symbol
 
     @property

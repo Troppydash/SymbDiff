@@ -188,7 +188,8 @@ class ReorderRule(Rule):
                 """
                 [P + x] => [x + P]
                 """
-                if isinstance(expression.right, literal.Variable) and not isinstance(expression.left, (literal.Real, literal.Variable)):
+                if isinstance(expression.right, literal.Variable) and not isinstance(expression.left,
+                                                                                     (literal.Real, literal.Variable)):
                     return True
             case _:
                 return False

@@ -29,3 +29,14 @@ def polynomial(coef: list[float], variable: literal.Literal | None = None) -> No
         )
 
     return root
+
+
+def variables(varstr: str) -> list[literal.Variable]:
+    vars = []
+    for var in varstr.split(' '):
+        if len(var) != 1:
+            raise MakeError("unable to create variables of non-1 length")
+
+        vars.append(literal.Variable(var))
+
+    return vars

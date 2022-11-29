@@ -56,6 +56,15 @@ class Node:
 
         return replaced
 
+    # equals
+    def weak_equals(self, other: 'Node') -> bool:
+        """
+        Weak equals compares the display out of the expressions to be the same,
+        does not regard the AST structure
+        :param other: The other expression
+        :return: Whether they are equal
+        """
+        return self.as_display() == other.as_display()
 
 
 Expression = Node
