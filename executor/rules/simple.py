@@ -214,14 +214,15 @@ class LeftAlignRule(Rule):
                 """
                 [[A + B] + [C + D]] => [[[A + B] + C] + D]
                 """
-                if type(expression.left) == type(expression) and type(expression.right) == type(expression):
+                if (type(expression.left) == type(expression) and type(expression.right) == type(expression))\
+                        or (expression.right.precedence == expression.left.precedence == expression.precedence):
                     self.setitem(self.BB_RULE)
                     return True
 
                 """
                 [A + [B + C]] => [[A + B] + C]
                 """
-                if type(expression.right) == type(expression):
+                if type(expression.right) == type(expression) or expression.right.precedence == expression.precedence:
                     self.setitem(self.LB_RULE)
                     return True
 
@@ -246,6 +247,7 @@ class LeftAlignRule(Rule):
                     ),
                     expression.right.right
                 )
+
 
 # TODO, POWER RULES (DIVISION too)
 # also correct the precedence ignoring on reordering

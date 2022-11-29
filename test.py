@@ -20,6 +20,14 @@ class TestSimplification(unittest.TestCase):
             expected.as_display()
         )
 
+    def test_reorder_rule(self):
+        expression = '2 * x * 2 + (2 + 4) + 3 * 3'
+        expected = '15 + 4 * x'
+        self.assertEqual(
+            simplify_expression(as_expression(expression)).as_display(),
+            as_expression(expected).as_display()
+        )
+
 
 class TestAsExpression(unittest.TestCase):
     def setUp(self) -> None:
